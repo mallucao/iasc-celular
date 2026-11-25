@@ -114,6 +114,12 @@
       window.addEventListener('message', function (ev) {
         if (!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(ev.origin || '')) return;
         var d = ev.data || {};
+        // Faixa de baixo do iPhone (abaixo da barra de abas) com a cor da barra: escura no tema escuro.
+        if (typeof d.fundo === 'string' && /^(#[0-9a-f]{3,8}|rgba?\([0-9., ]+\))$/i.test(d.fundo)) {
+          quadro.style.background = d.fundo;
+          document.documentElement.style.background = d.fundo;
+          document.body.style.background = d.fundo;
+        }
         if (d.iasc === 'pronto') esconderCapa();
         if (d.iasc === 'recarregar' && chave) abrir();
       });
