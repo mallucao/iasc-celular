@@ -94,14 +94,29 @@
         });
       }
 
+      // Altura da barrinha do iPhone (area de baixo). O sistema estica a barra de abas ate
+      // a borda com essa medida; enquanto ele nao confirmar, a faixa daqui continua.
+      function margemBaixo() {
+        try {
+          var d = document.createElement('div');
+          d.style.cssText = 'position:fixed;left:0;bottom:0;width:1px;height:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none;';
+          document.body.appendChild(d);
+          var h = Math.round(d.getBoundingClientRect().height) || 0;
+          document.body.removeChild(d);
+          return h > 0 && h <= 60 ? h : 0;
+        } catch (e) { return 0; }
+      }
+
       function abrir() {
         clearTimeout(relogio);
         mostrarCapa('Abrindo…', '', false);
         quadro.innerHTML = '';
+        quadro.style.paddingBottom = '';
+        var sab = margemBaixo();
         var f = document.createElement('iframe');
         f.title = 'IASC';
         f.setAttribute('allow', 'clipboard-write');
-        f.src = 'https://script.google.com/macros/s/' + chave + '/exec?tab=imunoterapia&casca=1&r=' + Date.now();
+        f.src = 'https://script.google.com/macros/s/' + chave + '/exec?tab=imunoterapia&casca=1' + (sab ? '&sab=' + sab : '') + '&r=' + Date.now();
         quadro.appendChild(f);
         // Versao antiga do sistema nao manda o aviso de "pronto": some sozinha depois de carregar.
         f.addEventListener('load', function () { setTimeout(function () { if (texto.textContent.indexOf('Abrindo') === 0) esconderCapa(); }, 9000); });
@@ -120,6 +135,8 @@
           document.documentElement.style.background = d.fundo;
           document.body.style.background = d.fundo;
         }
+        // O sistema ja cobre a barrinha com a barra de abas: a faixa daqui sai (tela inteira).
+        if (typeof d.baixo === 'number' && d.baixo > 0) quadro.style.paddingBottom = '0px';
         if (d.iasc === 'pronto') esconderCapa();
         if (d.iasc === 'recarregar' && chave) abrir();
       });
