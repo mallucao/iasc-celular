@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="IASC">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icone-192.png">
+  <title>IASC</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #ffffff; font-family: Arial, Helvetica, sans-serif; color: #1f2933; }
+    body { overflow: hidden; }
+    #quadro { position: fixed; inset: 0; padding-bottom: env(safe-area-inset-bottom); background: #f5f7f8; }
+    #quadro iframe { border: 0; width: 100%; height: 100%; display: block; background: #f5f7f8; }
+    #capa {
+      position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 18px; padding: 24px; text-align: center;
+      background: linear-gradient(135deg, #b600b4, #8e008c); color: #ffffff;
+      transition: opacity 0.35s ease;
+    }
+    #capa.some { opacity: 0; pointer-events: none; }
+    #capa img { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+    #capaTexto { font-size: 16px; font-weight: 700; min-height: 20px; }
+    #capaDetalhe { font-size: 14px; line-height: 1.45; max-width: 320px; opacity: 0.92; }
+    #capaBotao {
+      display: none; min-height: 46px; padding: 0 22px; border: 0; border-radius: 10px;
+      background: #ffffff; color: #8e008c; font-size: 16px; font-weight: 700;
+    }
+    .gira { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.35); border-top-color: #ffffff; animation: gira 0.9s linear infinite; }
+    @keyframes gira { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .gira { animation: none; } #capa { transition: none; } }
+  </style>
+</head>
+<body>
+  <div id="quadro"></div>
+  <div id="capa" role="status" aria-live="polite">
+    <img src="icone-192.png" alt="">
+    <div class="gira" id="capaGira"></div>
+    <div id="capaTexto">Abrindo…</div>
+    <div id="capaDetalhe"></div>
+    <button id="capaBotao" type="button">Tentar de novo</button>
+  </div>
+  <script>
+    // Pagina de entrada ("casca") do app de celular. Ela NAO guarda o endereco do
+    // sistema: a chave vem no link de instalacao (#k=... ou ?k=...) e fica so no
+    // aparelho. A pagina aceita apenas as chaves cuja impressao digital esta aqui.
+    (function () {
+      'use strict';
+      var ACEITAS = [
+        'b7d33c9468eb2ebded82a31578baea0a579169a5557750a8c195d4bc1c5e9abc',
+        '80ad871e5f09e3ac1753f5db76d59df04c8b9b56b6c91d3a6dd56e82aaf7cc00'
+      ];
+      var GUARDA = 'iasc_casca_k';
+      var ESPERA_MS = 30000;
+      var quadro = document.getElementById('quadro');
+      var capa = document.getElementById('capa');
+      var texto = document.getElementById('capaTexto');
+      var detalhe = document.getElementById('capaDetalhe');
+      var botao = document.getElementById('capaBotao');
+      var gira = document.getElementById('capaGira');
+      var chave = '';
+      var relogio = null;
+
+      function mostrarCapa(msg, det, comBotao) {
+        capa.classList.remove('some');
+        texto.textContent = msg || '';
+        detalhe.textContent = det || '';
+        botao.style.display = comBotao ? 'inline-block' : 'none';
+        gira.style.display = comBotao || !msg || msg.indexOf('Abrindo') !== 0 ? 'none' : 'block';
+      }
+      function esconderCapa() { clearTimeout(relogio); capa.classList.add('some'); }
+
+      function chaveDoEndereco() {
+        var achar = function (s) {
+          var m = /(?:^|[#?&])k=([A-Za-z0-9_-]{40,120})(?:&|$)/.exec(s || '');
+          return m ? m[1] : '';
+        };
+        return achar(location.hash) || achar(location.search);
+      }
+      function lerGuardada() { try { return localStorage.getItem(GUARDA) || ''; } catch (e) { return ''; } }
+      function guardar(k) { try { localStorage.setItem(GUARDA, k); } catch (e) { /* sem armazenamento: vale o link */ } }
+
+      function impressao(k) {
+        var dados = new TextEncoder().encode(k);
+        return crypto.subtle.digest('SHA-256', dados).then(function (buf) {
+          return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+        });
+      }
+
+      function abrir() {
+        clearTimeout(relogio);
+        mostrarCapa('Abrindo…', '', false);
+        quadro.innerHTML = '';
+        var f = document.createElement('iframe');
+        f.title = 'IASC';
+        f.setAttribute('allow', 'clipboard-write');
+        f.src = 'https://script.google.com/macros/s/' + chave + '/exec?tab=imunoterapia&casca=1&r=' + Date.now();
+        quadro.appendChild(f);
+        // Versao antiga do sistema nao manda o aviso de "pronto": some sozinha depois de carregar.
+        f.addEventListener('load', function () { setTimeout(function () { if (texto.textContent.indexOf('Abrindo') === 0) esconderCapa(); }, 9000); });
+        relogio = setTimeout(function () {
+          mostrarCapa('Está demorando para abrir', 'Confira a internet do celular e toque em Tentar de novo.', true);
+        }, ESPERA_MS);
+      }
+
+      // O sistema avisa quando esta pronto e quando pede para recarregar.
+      window.addEventListener('message', function (ev) {
+        if (!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(ev.origin || '')) return;
+        var d = ev.data || {};
+        if (d.iasc === 'pronto') esconderCapa();
+        if (d.iasc === 'recarregar' && chave) abrir();
+      });
+      botao.addEventListener('click', function () { if (chave) abrir(); });
+
+      var k = chaveDoEndereco() || lerGuardada();
+      if (!k) {
+        mostrarCapa('Falta o link de instalação', 'Abra este aplicativo pelo link que você recebeu e adicione de novo à tela de início.', false);
+        return;
+      }
+      if (!(window.crypto && crypto.subtle && window.TextEncoder)) {
+        mostrarCapa('Navegador sem suporte', 'Abra pelo Safari atualizado.', false);
+        return;
+      }
+      impressao(k).then(function (h) {
+        if (ACEITAS.indexOf(h) === -1) {
+          mostrarCapa('Link de instalação inválido', 'Peça um link novo.', false);
+          return;
+        }
+        chave = k;
+        guardar(k);
+        abrir();
+      }).catch(function () {
+        mostrarCapa('Não foi possível abrir', 'Feche e abra o aplicativo de novo.', false);
+      });
+    })();
+  </script>
+</body>
+</html>
